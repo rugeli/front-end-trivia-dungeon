@@ -29,7 +29,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-      - run: npm ci
+      - run: echo "npm ci"
       - name: Process dataset to staging
         run: echo "process to stag"
         
@@ -59,7 +59,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-      - run: npm ci
+      - run: echo "npm ci"
       - name: Process dataset to production
         if: steps.check_collaborator.outputs.collaborators == ''
         run: | 
