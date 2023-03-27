@@ -46,8 +46,6 @@ jobs:
             --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
             --header 'content-type: application/json')
           collaborators=$(echo "$response" | jq --arg login "${{ github.triggering_actor }}" '.[] | select(.login == $login) | .login')
-          echo "github.triggering_actor"
-          echo "$collaborator"
 
   process_dataset_to_production: 
     name: Process Dataset to Prod
