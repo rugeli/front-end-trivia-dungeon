@@ -52,7 +52,7 @@ jobs:
   process_dataset_to_production: 
     name: Process Dataset to Prod
     runs-on: ubuntu-latest
-    if: github.event.inputs.database == 'production' && github.ref == 'refs/heads/main'
+#     if: github.event.inputs.database == 'production' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v3
       - name: Setup Node
@@ -64,10 +64,8 @@ jobs:
         if: steps.check_collaborator.outputs.collaborators == ''
         run: | 
           echo "process to prod"
-          echo "${{ steps.check_collaborator.outputs.collaborators }}"
       - name: Not authorized to process dataset to production
         if: steps.check_collaborator.outputs.collaborators != ''
         run: |
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
-          echo "${{ "steps.check_collaborator.outputs.collaborators }}""
         
