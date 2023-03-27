@@ -45,7 +45,7 @@ jobs:
             --url https://api.github.com/repos/${{ github.repository }}/collaborators \
             --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
             --header 'content-type: application/json')
-          collaborators=$(echo "$response" | jq --arg login "${{ github.triggering_actor }}" '.[] | select(.login == $login) | .login')
+          collaborators=$(echo "$response" | jq --arg login "${{ github.triggering_actor }}" '.[] | select(.login == $login) | length')
 
   process_dataset_to_production: 
     name: Process Dataset to Prod
@@ -59,11 +59,11 @@ jobs:
           node-version: 16.x
       - run: echo "npm ci"
       - name: Process dataset to production
-        if: steps.check_collaborator.outputs.collaborators == ''
+        if: steps.check_collaborator.outputs.collaborators == '1'
         run: | 
           echo "process to prod"
       - name: Not authorized to process dataset to production
-        if: steps.check_collaborator.outputs.collaborators != ''
+        if: steps.check_collaborator.outputs.collaborators != '1'
         run: |
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
         
