@@ -69,5 +69,5 @@ jobs:
         if: steps.check_collaborator.outputs.collaborators != ''
         run: |
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
-          echo "${{ echo "steps.check_collaborator.outputs.collaborators }}""
+          echo "${{ "steps.check_collaborator.outputs.collaborators }}""
         
