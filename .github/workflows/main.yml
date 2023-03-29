@@ -62,9 +62,11 @@ jobs:
       - name: Process dataset to production
         if: contains(steps.check_collaborator.outputs.collaborators, github.triggering_actor)
         run: | 
+          echo ${{ steps.check_collaborator.outputs.collaborators }}
           echo "process to prod"
       - name: Not authorized to process dataset to production
         if: ${{ !contains(steps.check_collaborator.outputs.collaborators, github.triggering_actor) }}
         run: |
+          echo ${{ steps.check_collaborator.outputs.collaborators }}
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
         
