@@ -52,6 +52,7 @@ jobs:
     name: Process Dataset to Prod
     runs-on: ubuntu-latest
 #     if: github.event.inputs.database == 'production' && github.ref == 'refs/heads/main'
+    needs: get_admins
     steps:
       - uses: actions/checkout@v3
       - name: Setup Node
@@ -60,13 +61,13 @@ jobs:
           node-version: 16.x
       - run: echo "npm ci"
       - name: Process dataset to production
-        if: contains(jobs.get_admins.outputs.check_collaborator.outputs.collaborators, github.triggering_actor)
+        if: contains(steps.check_collaborator.outputs.collaborators, github.triggering_actor)
         run: | 
-          echo ${{ jobs.get_admins.outputs.check_collaborator.outputs.collaborators }}
+          echo ${{ steps.check_collaborator.outputs.collaborators }}
           echo "process to prod"
       - name: Not authorized to process dataset to production
-        if: ${{ !contains(jobs.get_admins.outputs.check_collaborator.outputs.collaborators, github.triggering_actor) }}
+        if: ${{ !contains(steps.check_collaborator.outputs.collaborators, github.triggering_actor) }}
         run: |
-          echo ${{ jobs.get_admins.outputs.check_collaborator.outputs.collaborators }}
+          echo ${{ steps.check_collaborator.outputs.collaborators }}
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
         
