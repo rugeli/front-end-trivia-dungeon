@@ -35,6 +35,8 @@ jobs:
         
   get_admins:
     runs-on: ubuntu-latest
+    outputs:
+      collaborators: ${{ steps.check_collaborator.outputs.collaborators }}
     steps:
       - name: Get collaborators
         id: check_collaborator
