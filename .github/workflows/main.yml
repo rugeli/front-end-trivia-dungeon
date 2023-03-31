@@ -36,7 +36,7 @@ jobs:
   get_admins:
     runs-on: ubuntu-latest
     outputs:
-      collaborators: ${{ steps.check_collaborator.outputs.collaborators }}
+      collaborators: ${{ steps.check_collaborator.outputs.text }}
     steps:
       - name: Get collaborators
         id: check_collaborator
@@ -68,13 +68,13 @@ jobs:
           node-version: 16.x
       - run: echo "npm ci"
       - name: Process dataset to production
-        if: contains(needs.get_admins.outputs.collaborators, github.triggering_actor)
+        if: contains(needs.get_admins.outputs.text, github.triggering_actor)
         run: | 
-          echo ${{ needs.get_admins.outputs.collaborators }}
+          echo ${{ needs.get_admins.outputs.text }}
           echo "process to prod"
       - name: Not authorized to process dataset to production
-        if: ${{ !contains(needs.get_admins.outputs.collaborators, github.triggering_actor) }}
+        if: ${{ !contains(needs.get_admins.outputs.text, github.triggering_actor) }}
         run: |
-          echo ${{ needs.get_admins.outputs.collaborators }}
+          echo ${{ needs.get_admins.outputs.text }}
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
         
