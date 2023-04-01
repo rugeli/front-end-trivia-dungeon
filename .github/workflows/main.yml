@@ -53,6 +53,7 @@ jobs:
           echo "$collaborators" >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
           echo $collaborators
+          echo ${{ steps.check_collaborators.outputs.collaborators }}
           
   process_dataset_to_production: 
     name: Process Dataset to Prod
@@ -69,11 +70,13 @@ jobs:
       - name: Process dataset to production
         if: contains(needs.get_admins.outputs.collaborators, github.triggering_actor)
         run: | 
+          echo ${{ steps.check_collaborators.outputs.collaboarators }}
           echo ${{ needs.get_admins.outputs.collaborators }}
           echo "process to prod"
       - name: Not authorized to process dataset to production
         if: ${{ !contains(needs.get_admins.outputs.collaborators, github.triggering_actor) }}
         run: |
+          echo ${{ steps.check_collaborators.outputs.collaboarators }}
           echo ${{ needs.get_admins.outputs.collaborators }}
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
         
