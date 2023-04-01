@@ -35,8 +35,8 @@ jobs:
         
   get_admins:
     runs-on: ubuntu-latest
-    outputs:
-      collaborators: ${{ steps.check_collaborator.outputs.collaborators }}
+#     outputs:
+#       collaborators: ${{ steps.check_collaborator.outputs.collaborators }}
     steps:
       - name: Get collaborators
         id: check_collaborator
@@ -49,17 +49,16 @@ jobs:
             --header 'content-type: application/json')
           collaborators=$(echo "$response" | jq -r '.[] | select(.permissions.admin == true) | .login')
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "collaborators<<$EOF" >> $GITHUB_OUTPUT
-          echo "$collaborators" >> $GITHUB_OUTPUT
-          echo "$EOF" >> $GITHUB_OUTPUT
+          echo "collaborators<<$EOF" >> $GITHUB_ENV
+          echo "collaborators=$collaborators" >> $GITHUB_ENV
+          echo "$EOF" >> $GITHUB_ENV
           echo $collaborators
-          echo ${{ steps.check_collaborators.outputs.collaborators }}
           
   process_dataset_to_production: 
     name: Process Dataset to Prod
     runs-on: ubuntu-latest
 #     if: github.event.inputs.database == 'production' && github.ref == 'refs/heads/main'
-    needs: get_admins
+#     needs: get_admins
     steps:
       - uses: actions/checkout@v3
       - name: Setup Node
@@ -68,15 +67,12 @@ jobs:
           node-version: 16.x
       - run: echo "npm ci"
       - name: Process dataset to production
-        if: contains(needs.get_admins.outputs.collaborators, github.triggering_actor)
+        if: contains(env.collaborators, github.triggering_actor)
         run: | 
-          echo ${{ steps.check_collaborators.outputs.collaboarators }}
-          echo ${{ needs.get_admins.outputs.collaborators }}
+          echo ${{ env.collaborators }}
           echo "process to prod"
       - name: Not authorized to process dataset to production
-        if: ${{ !contains(needs.get_admins.outputs.collaborators, github.triggering_actor) }}
+        if: ${{ !contains(env.collaborators, github.triggering_actor) }}
         run: |
-          echo ${{ steps.check_collaborators.outputs.collaboarators }}
-          echo ${{ needs.get_admins.outputs.collaborators }}
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
         
