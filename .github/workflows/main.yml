@@ -74,5 +74,6 @@ jobs:
       - name: Not authorized to process dataset to production
         if: ${{ !contains(env.collaborators, github.triggering_actor) }}
         run: |
+          echo ${{ env.collaborators }}
           echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
         
