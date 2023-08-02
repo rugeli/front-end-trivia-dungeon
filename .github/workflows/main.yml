@@ -1,79 +1,59 @@
-name: Upload dataset to staging or production DB
+name: Analyze
 
-on:
-  workflow_dispatch:
-    inputs: 
-      dataset-folder:
-        description: "Enter the relative path to the new dataset"
-        required: true
-      skip-per-cell-upload:
-        type: boolean
-        description: "Skip the file-info upload to save some processing time. Only select if this isn't the first time uploading the dataset, and there are no changes to per cell file-info"
-        default: false
-      database:
-        description: "Please choose a database to upload dataset"
-        type: choice
-        default: "staging"
-        options: 
-        - staging
-        - production
+on: 
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-jobs: 
-  process_dataset_to_staging: 
-    name: Process Dataset to Stag
-    runs-on: ubuntu-latest
-    if: github.event.inputs.database == 'staging'
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-      - run: echo "npm ci"
-      - name: Process dataset to staging
-        run: echo "process to stag"
-        
-  get_admins:
-    runs-on: ubuntu-latest
-#     outputs:
-#       collaborators: ${{ steps.check_collaborator.outputs.collaborators }}
-    steps:
-      - name: Get collaborators
-        id: check_collaborator
-        run: |
-          response=$(curl --request GET \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            --url https://api.github.com/repos/${{ github.repository }}/collaborators \
-            --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
-            --header 'content-type: application/json')
-          collaborators=$(echo "$response" | jq -r '.[] | select(.permissions.admin == true) | .login')
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "collaborators<<$EOF" >> $GITHUB_ENV
-          echo "collaborators=$collaborators" >> $GITHUB_ENV
-          echo "$EOF" >> $GITHUB_ENV
-          echo $collaborators
-          
-  process_dataset_to_production: 
-    name: Process Dataset to Prod
-    runs-on: ubuntu-latest
-#     if: github.event.inputs.database == 'production' && github.ref == 'refs/heads/main'
-#     needs: get_admins
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-      - run: echo "npm ci"
-      - name: Process dataset to production
-        if: contains(env.collaborators, github.triggering_actor)
-        run: | 
-          echo ${{ env.collaborators }}
-          echo "process to prod"
-      - name: Not authorized to process dataset to production
-        if: ${{ !contains(env.collaborators, github.triggering_actor) }}
-        run: |
-          echo ${{ env.collaborators }}
-          echo "Failed to process dataset to production database. Please contact the owner of the repository to obtain the permission."
+jobs:
+    Analyze:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                python-version: [3.9]
+                os: [ubuntu-latest]
+        steps:
+            - uses: actions/checkout@v3
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v4
+              with:
+                  python-version: ${{ matrix.python-version }}
+            - name: Install Dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install .[all]
+            - name: Pack test recipe
+              run: |
+                  pack -r cellpack/tests/recipes/v2/test_spheres.json -c cellpack/tests/packing-configs/test_config.json
+            - name: Modify JSON with PR sub_directory path
+              run: |
+                  jq --arg branch_name "${{  github.ref_name  }}" '.create_report.output_image_location |= "https://cellpack-results.s3.us-west-2.amazonaws.com/\($branch_name)/spheresSST/figures"' cellpack/tests/analysis-configs/PR_analysis_config.json > cellpack/tests/analysis-configs/PR_analysis_config_temp.json
+                  mv cellpack/tests/analysis-configs/PR_analysis_config_temp.json cellpack/tests/analysis-configs/PR_analysis_config.json
+            - name: Run analysis code
+              run: analyze -r cellpack/tests/recipes/v2/test_spheres.json -a cellpack/tests/analysis-configs/PR_analysis_config.json -p cellpack/tests/outputs/test_spheres/spheresSST
+            - name: Upload results
+              uses: actions/upload-artifact@v3
+              with:
+                  name: results
+                  path: cellpack/tests/outputs/test_spheres/
+    Comment:
+        runs-on: ubuntu-latest
+        needs: [Analyze]
+        steps:
+            - uses: actions/checkout@v3
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v1-node16
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: us-west-2
+            - uses: actions/download-artifact@v3
+            - name: Copy files to results bucket
+              run: aws s3 cp ./results s3://cellpack-results/${{  github.ref_name  }}/ --recursive --acl public-read
+            - uses: iterative/setup-cml@v1
+            - name: Update comment
+              env:
+                  REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  cml comment update --watermark-title="{workflow} report" ./results/analysis_report.md --target=pr
+                  cat ./results/analysis_report.md
         
